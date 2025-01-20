@@ -1,22 +1,58 @@
 import json
 import argparse
 import pandas as pd
-from . import common
-from .drop_eval import DropEval
-from .gpqa_eval import GPQAEval
-from .humaneval_eval import HumanEval
-from .math_eval import MathEval
-from .mgsm_eval import MGSMEval
-from .mmlu_eval import MMLUEval
-from .simpleqa_eval import SimpleQAEval
-from .sampler.chat_completion_sampler import (
+import common
+from drop_eval import DropEval
+from gpqa_eval import GPQAEval
+from humaneval_eval import HumanEval
+from math_eval import MathEval
+from mgsm_eval import MGSMEval
+from mmlu_eval import MMLUEval
+from simpleqa_eval import SimpleQAEval
+from sampler.chat_completion_sampler import (
     OPENAI_SYSTEM_MESSAGE_API,
     OPENAI_SYSTEM_MESSAGE_CHATGPT,
     ChatCompletionSampler,
 )
-from .sampler.o1_chat_completion_sampler import O1ChatCompletionSampler
-from .sampler.claude_sampler import ClaudeCompletionSampler, CLAUDE_SYSTEM_MESSAGE_LMSYS
+from sampler.o1_chat_completion_sampler import O1ChatCompletionSampler
+from sampler.claude_sampler import ClaudeCompletionSampler, CLAUDE_SYSTEM_MESSAGE_LMSYS
 
+from typing import BinaryIO, TextIO, Union
+
+import os
+import blobfile as bf
+
+def BlobFile(
+    path,
+    mode = "r",
+    streaming = None,
+    buffer_size = None,
+    cache_dir = None,
+    file_size = None,
+    version = None,
+) -> Union[BinaryIO, TextIO]:
+    import io
+    import urllib.request
+    import hashlib
+    import pathlib
+
+    h: str = hashlib.md5(path.encode()).hexdigest()
+    d = pathlib.Path("./data/")
+    d.mkdir(parents=True, exist_ok=True)
+    p: pathlib.Path = d / h
+
+    if p.exists():
+        data = open(p, 'rb').read()
+    else:
+        with urllib.request.urlopen(path) as f:
+            data = f.read()
+        with open(p, 'wb') as f:
+            f.write(data)
+    if len(mode) > 1 and mode[1] == 'b':
+        return io.BytesIO(data)
+    return io.StringIO(data.decode())
+
+bf.BlobFile = BlobFile
 
 def main():
     parser = argparse.ArgumentParser(
